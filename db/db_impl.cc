@@ -9,6 +9,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file. See the AUTHORS file for names of contributors.
 #include "db/db_impl.h"
+#include <iostream>
 
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
@@ -100,6 +101,8 @@
 #include "util/stop_watch.h"
 #include "util/string_util.h"
 #include "util/sync_point.h"
+
+using namespace std;
 
 namespace rocksdb {
 const std::string kDefaultColumnFamilyName("default");
@@ -1001,6 +1004,7 @@ std::vector<Status> DBImpl::MultiGet(
     ColumnFamilyData* cfd;
     SuperVersion* super_version;
   };
+
   std::unordered_map<uint32_t, MultiGetColumnFamilyData*> multiget_cf_data;
   // fill up and allocate outside of mutex
   for (auto cf : column_family) {
@@ -1014,6 +1018,7 @@ std::vector<Status> DBImpl::MultiGet(
   }
 
   mutex_.Lock();
+
   if (read_options.snapshot != nullptr) {
     snapshot = reinterpret_cast<const SnapshotImpl*>(
         read_options.snapshot)->number_;
@@ -1042,15 +1047,18 @@ std::vector<Status> DBImpl::MultiGet(
   // First look in the memtable, then in the immutable memtable (if any).
   // s is both in/out. When in, s could either be OK or MergeInProgress.
   // merge_operands will contain the sequence of merges in the latter case.
+
   for (size_t i = 0; i < num_keys; ++i) {
     merge_context.Clear();
     Status& s = stat_list[i];
     std::string* value = &(*values)[i];
-
     LookupKey lkey(keys[i], snapshot);
+
     auto cfh = reinterpret_cast<ColumnFamilyHandleImpl*>(column_family[i]);
+
     RangeDelAggregator range_del_agg(cfh->cfd()->internal_comparator(),
                                      snapshot);
+
     auto mgd_iter = multiget_cf_data.find(cfh->cfd()->GetID());
     assert(mgd_iter != multiget_cf_data.end());
     auto mgd = mgd_iter->second;
@@ -1059,6 +1067,7 @@ std::vector<Status> DBImpl::MultiGet(
         (read_options.read_tier == kPersistedTier &&
          has_unpersisted_data_.load(std::memory_order_relaxed));
     bool done = false;
+
     if (!skip_memtable) {
       if (super_version->mem->Get(lkey, value, &s, &merge_context,
                                   &range_del_agg, read_options)) {
@@ -1070,6 +1079,7 @@ std::vector<Status> DBImpl::MultiGet(
         // TODO(?): RecordTick(stats_, MEMTABLE_HIT)?
       }
     }
+
     if (!done) {
       PinnableSlice pinnable_val;
       PERF_TIMER_GUARD(get_from_output_files_time);
