@@ -22,16 +22,23 @@ std::string HDD_DB_path = "/tmp/rocksdb_virtual_HDD";
 /**
  *  Move()
  */
-std::vector<Status> move(DB* src_db, DB* dest_db,
+std::vector<Status> move(DB* src_db, DB* dest_db, ColumnFamilyHandle* dest_db_cfh,
                          const ReadOptions& read_options, const WriteOptions& write_options,
                          const vector<Slice>& keys)
 {
-
     vector<string> values;
     vector<Status> status_vec;
+    WriteBatch batch;
 
     // Get 'values' for all 'keys'
     status_vec = src_db->MultiGet(read_options, keys, &values);
+
+    for (auto k = 0; k < values.size(); k++) {
+        batch.Put(dest_db_cfh, keys.at(k), Slice(values.at(k)));
+    }
+
+    Status s = dest_db->Write(write_options, &batch);
+    assert(s.ok());
 
     return status_vec;
 }
@@ -106,12 +113,26 @@ int main() {
     keys.push_back("key3");
     keys.push_back("key4");
 
+    rocksdb::Iterator* it;
+    it = db_hdd->NewIterator(rocksdb::ReadOptions());
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+        cout << "\n" << it->key().ToString() << ": " << it->value().ToString() << endl;
+    }
+    cout << "\n\n";
+    assert(it->status().ok()); // Check for any errors found during the scan
+
     // MOVE command
-    vector<Status> stats = move(db_ssd, db_hdd, ReadOptions(), WriteOptions(), keys);
+    vector<Status> stats = move(db_ssd, db_hdd, handles_hdd[0], ReadOptions(), WriteOptions(), keys);
 
     for(auto s : stats) {
         assert(s.ok());
     }
+
+    it = db_hdd->NewIterator(rocksdb::ReadOptions());
+    for (it->SeekToFirst(); it->Valid(); it->Next()) {
+        cout << "\n" << it->key().ToString() << ": " << it->value().ToString() << endl;
+    }
+    assert(it->status().ok()); // Check for any errors found during the scan
 
     /****************************************************************************************************************/
 
