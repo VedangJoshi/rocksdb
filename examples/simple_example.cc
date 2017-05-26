@@ -1,56 +1,125 @@
-// Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-// This source code is licensed under the BSD-style license found in the
-// LICENSE file in the root directory of this source tree. An additional grant
-// of patent rights can be found in the PATENTS file in the same directory.
-
 #include <cstdio>
 #include <string>
+#include <iostream>
 
 #include "rocksdb/db.h"
 #include "rocksdb/slice.h"
 #include "rocksdb/options.h"
+#include "rocksdb/iterator.h"
+
+#define TIER_SSD 0
+#define TIER_HDD 1
 
 using namespace rocksdb;
+using namespace std;
 
-std::string kDBPath = "/tmp/rocksdb_simple_example";
+// TODO: change to real paths
+// Below are fake paths. Actual paths could be something like:
+//                  /dev/SSD1, /dev/HDD4 etc.
+std::string SSD_DB_path = "/tmp/rocksdb_virtual_SSD"; // 0000 0000 - options flag
+std::string HDD_DB_path = "/tmp/rocksdb_virtual_HDD"; // 0000 0001 - options flag
 
 int main() {
-  DB* db;
+
+  // Options
   Options options;
-  // Optimize RocksDB. This is the easiest way to get RocksDB to perform well
-  options.IncreaseParallelism();
-  options.OptimizeLevelStyleCompaction();
-  // create the DB if it's not already present
   options.create_if_missing = true;
+  Status s;
 
-  // open DB
-  Status s = DB::Open(options, kDBPath, &db);
-  assert(s.ok());
+  /****************************************************************************************************************/
 
-  // Put key-value
-  s = db->Put(WriteOptions(), "key1", "value");
-  assert(s.ok());
-  std::string value;
-  // get value
-  s = db->Get(ReadOptions(), "key1", &value);
-  assert(s.ok());
-  assert(value == "value");
+  // Holds normal KV pairs in ssd
+  DB* db_ssd;
 
-  // atomically apply a set of updates
-  {
-    WriteBatch batch;
-    batch.Delete("key1");
-    batch.Put("key2", value);
-    s = db->Write(WriteOptions(), &batch);
+  // Holds normal KV pairs in hdd
+  DB* db_hdd;
+
+  /****************************************************************************************************************/
+
+  std::vector<ColumnFamilyDescriptor> column_families_hdd;
+
+  // Default column family : must
+  column_families_hdd.push_back(ColumnFamilyDescriptor(kDefaultColumnFamilyName, ColumnFamilyOptions()));
+
+  // Handles
+  std::vector<ColumnFamilyHandle*> handles_hdd;
+
+  // OPEN - HDD DB
+  s = DB::Open(options, HDD_DB_path, column_families_hdd, &handles_hdd, &db_hdd);
+  if (!s.ok()) {
+    cerr << s.ToString() << endl;
+    delete db_hdd;
   }
 
-  s = db->Get(ReadOptions(), "key1", &value);
-  assert(s.IsNotFound());
+  /****************************************************************************************************************/
 
-  db->Get(ReadOptions(), "key2", &value);
-  assert(value == "value");
+  std::vector<ColumnFamilyDescriptor> column_families_ssd;
 
-  delete db;
+  // Default column family : must
+  column_families_ssd.push_back(ColumnFamilyDescriptor(kDefaultColumnFamilyName, ColumnFamilyOptions()));
+
+  // Handles
+  std::vector<ColumnFamilyHandle*> handles_ssd;
+
+  // OPEN - SSD DB
+  s = DB::Open(options, SSD_DB_path, column_families_ssd, &handles_ssd, &db_ssd);
+  if (!s.ok()) {
+    cerr << s.ToString() << endl;
+    delete db_ssd;
+  }
+
+  /****************************************************************************************************************/
+
+  // PUT - HDD
+  char* val1 = (char*) malloc(80000000 * sizeof(char));
+  s = db_hdd->Put(WriteOptions(), handles_hdd[0], Slice("key1"), Slice("val1"));
+
+  // 80MB Values
+  char* val2 = (char*) malloc(80000000 * sizeof(char));
+  char* val3 = (char*) malloc(80000000 * sizeof(char));
+
+  // PUTS - SSD (atomic)
+  WriteBatch batch;
+  batch.Put(handles_ssd[0], Slice("key2"), Slice("val2"));
+  batch.Put(handles_ssd[0], Slice("key3"), Slice("val3"));
+  batch.Put(handles_ssd[0], Slice("key4"), Slice("val4"));
+  s = db_ssd->Write(WriteOptions(), &batch);
+  assert(s.ok());
+
+  /****************************************************************************************************************/
+
+  rocksdb::Iterator* it;
+
+  // GET from HDD
+  it = db_hdd->NewIterator(rocksdb::ReadOptions());
+  for (it->SeekToFirst(); it->Valid(); it->Next()) {
+    cout << "\n" << it->key().ToString() << ": " << it->value().ToString() << endl;
+  }
+  assert(it->status().ok()); // Check for any errors found during the scan
+
+  // GET from SSD
+  it = db_ssd->NewIterator(rocksdb::ReadOptions());
+  for (it->SeekToFirst(); it->Valid(); it->Next()) {
+    cout << "\n" << it->key().ToString() << ": " << it->value().ToString() << endl;
+  }
+  assert(it->status().ok()); // Check for any errors found during the scan
+
+  delete it;
+
+  /****************************************************************************************************************/
+
+  for (auto handle : handles_hdd) {
+    delete handle;
+  }
+
+  for (auto handle : handles_ssd) {
+    delete handle;
+  }
+
+  /****************************************************************************************************************/
+
+  delete db_hdd;
+  delete db_ssd;
 
   return 0;
 }
