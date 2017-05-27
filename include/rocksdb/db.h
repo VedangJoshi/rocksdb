@@ -281,6 +281,16 @@ class DB {
                              ColumnFamilyHandle* column_family,
                              const Slice& begin_key, const Slice& end_key);
 
+
+
+    // move keys from one DB to other
+    virtual Status move(DB* src_db,
+                        DB* dest_db,
+                        ColumnFamilyHandle* dest_db_cfh,
+                        const ReadOptions& read_options,
+                        const WriteOptions& write_options,
+                        const std::vector<Slice>& keys) = 0;
+
   // Merge the database entry for "key" with "value".  Returns OK on success,
   // and a non-OK status on error. The semantics of this operation is
   // determined by the user provided merge_operator when opening DB.
@@ -340,6 +350,7 @@ class DB {
       const ReadOptions& options,
       const std::vector<ColumnFamilyHandle*>& column_family,
       const std::vector<Slice>& keys, std::vector<std::string>* values) = 0;
+
   virtual std::vector<Status> MultiGet(const ReadOptions& options,
                                        const std::vector<Slice>& keys,
                                        std::vector<std::string>* values) {

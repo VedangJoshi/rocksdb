@@ -64,6 +64,16 @@ class StackableDB : public DB {
     return db_->DestroyColumnFamilyHandle(column_family);
   }
 
+  using DB::move;
+  virtual Status move(DB* src_db,
+                      DB* dest_db,
+                      ColumnFamilyHandle* dest_db_cfh,
+                      const ReadOptions& read_options,
+                      const WriteOptions& write_options,
+                      const std::vector<Slice>& keys) {
+    return db_->move(src_db, dest_db, dest_db_cfh, read_options, write_options, keys);
+  };
+
   using DB::Put;
   virtual Status Put(const WriteOptions& options,
                      ColumnFamilyHandle* column_family, const Slice& key,

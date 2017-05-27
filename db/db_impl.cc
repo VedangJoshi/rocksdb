@@ -70,6 +70,7 @@
 #include "options/options_parser.h"
 #include "port/likely.h"
 #include "port/port.h"
+
 #include "rocksdb/cache.h"
 #include "rocksdb/compaction_filter.h"
 #include "rocksdb/db.h"
@@ -101,6 +102,7 @@
 #include "util/stop_watch.h"
 #include "util/string_util.h"
 #include "util/sync_point.h"
+#include "util/mutexlock.h"
 
 using namespace std;
 
@@ -1130,6 +1132,46 @@ std::vector<Status> DBImpl::MultiGet(
   PERF_TIMER_STOP(get_post_process_time);
 
   return stat_list;
+}
+
+
+/**
+ *  move() - naive
+ */
+Status DBImpl:: move(DB* src_db,
+                     DB* dest_db,
+                     ColumnFamilyHandle* dest_db_cfh,
+                     const ReadOptions& read_options,
+                     const WriteOptions& write_options,
+                     const vector<Slice>& keys) {
+   vector<string> values;
+   vector<Status> status_vec;
+   WriteBatch batch;
+   SpinMutex spin_mutex;
+
+   // spin_mutex - low overhead for low contention
+   spin_mutex.lock();
+
+   // Get 'values' for all 'keys'
+   // Delete() called within this function
+   status_vec = src_db->MultiGet(read_options, keys, &values);
+
+   for (Status s : status_vec) {
+       assert(s.ok());
+   }
+
+   // batched PUT
+   for (auto k = 0; k < values.size(); k++) {
+       batch.Put(dest_db_cfh, keys.at(k), Slice(values.at(k)));
+   }
+
+   // write batch
+   Status s = dest_db->Write(write_options, &batch);
+   assert(s.ok());
+
+   spin_mutex.unlock();
+
+   return s;
 }
 
 Status DBImpl::CreateColumnFamily(const ColumnFamilyOptions& cf_options,

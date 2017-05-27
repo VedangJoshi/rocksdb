@@ -35,6 +35,13 @@ typedef std::shared_ptr<EvictAllVersionsCompactionListener>
 std::vector<std::shared_ptr<EventListener>> all_blobdb_listeners;
 std::vector<ReconcileWalFilter_t> all_wal_filters;
 
+Status move(DB* src_db,
+            DB* dest_db,
+            ColumnFamilyHandle* dest_db_cfh,
+            const ReadOptions& read_options,
+            const WriteOptions& write_options,
+            const std::vector<Slice>& keys) {}
+
 Status BlobDB::OpenAndLoad(const Options& options,
                            const BlobDBOptions& bdb_options,
                            const std::string& dbname, BlobDB** blob_db,

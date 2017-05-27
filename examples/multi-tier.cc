@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "rocksdb/db.h"
+#include "db/db_impl.h"
 #include "rocksdb/slice.h"
 #include "rocksdb/options.h"
 #include "rocksdb/iterator.h"
@@ -19,43 +20,6 @@ using namespace std;
 //                  /dev/SSD1, /dev/HDD4 etc.
 std::string SSD_DB_path = "/tmp/SSD_on_rocks";
 std::string HDD_DB_path = "/tmp/HDD_on_rocks";
-
-/**
- *  move() - naive
- */
-std::vector<Status>
-move(DB* src_db,
-     DB* dest_db,
-     ColumnFamilyHandle* src_db_cfh,
-     ColumnFamilyHandle* dest_db_cfh,
-     const ReadOptions& read_options,
-     const WriteOptions& write_options,
-     const vector<Slice>& keys)
-{
-    vector<string> values;
-    vector<Status> status_vec;
-    WriteBatch batch;
-    SpinMutex spin_mutex;
-
-    // spin_mutex - low overhead for low contention
-    spin_mutex.lock();
-
-    // Get 'values' for all 'keys'
-    status_vec = src_db->MultiGet(read_options, keys, &values);
-
-    // batched PUT
-    for (auto k = 0; k < values.size(); k++) {
-        batch.Put(dest_db_cfh, keys.at(k), Slice(values.at(k)));
-    }
-
-    // write batch
-    Status s = dest_db->Write(write_options, &batch);
-    assert(s.ok());
-
-    spin_mutex.unlock();
-
-    return status_vec;
-}
 
 int main() {
     // Options
@@ -139,16 +103,14 @@ int main() {
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         cout << it->key().ToString() << ": " << it->value().ToString() << endl;
     }
-    cout << "*****" << endl;
+
+    cout << endl << "*****" << endl;
 
     assert(it->status().ok()); // Check for any errors found during the scan
 
     // MOVE
-    vector<Status> stats = move(db_ssd, db_hdd, handles_ssd[0], handles_hdd[0], ReadOptions(), WriteOptions(), keys);
-
-    for(auto s : stats) {
-        assert(s.ok());
-    }
+    s = db_ssd->move(db_ssd, db_hdd, handles_hdd[0], ReadOptions(), WriteOptions(), keys);
+    assert(s.ok());
 
     cout << "After :: HDD" << endl;
     it = db_hdd->NewIterator(rocksdb::ReadOptions());
