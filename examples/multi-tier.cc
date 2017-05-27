@@ -116,12 +116,13 @@ int main() {
     rocksdb::Iterator* it;
     it = db_hdd->NewIterator(rocksdb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
-        cout << "\n" << it->key().ToString() << ": " << it->value().ToString() << endl;
+        cout << it->key().ToString() << ": " << it->value().ToString() << endl;
     }
-    cout << "\n\n";
+    cout << endl;
+
     assert(it->status().ok()); // Check for any errors found during the scan
 
-    // MOVE command
+    // MOVE
     vector<Status> stats = move(db_ssd, db_hdd, handles_hdd[0], ReadOptions(), WriteOptions(), keys);
 
     for(auto s : stats) {
@@ -130,7 +131,7 @@ int main() {
 
     it = db_hdd->NewIterator(rocksdb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
-        cout << "\n" << it->key().ToString() << ": " << it->value().ToString() << endl;
+        cout << it->key().ToString() << ": " << it->value().ToString() << endl;
     }
     assert(it->status().ok()); // Check for any errors found during the scan
 
