@@ -1071,10 +1071,15 @@ std::vector<Status> DBImpl::MultiGet(
     if (!skip_memtable) {
       if (super_version->mem->Get(lkey, value, &s, &merge_context,
                                   &range_del_agg, read_options)) {
+
+          // DELETE
+          this->Delete(WriteOptions(), column_family[i], keys[i]);
         done = true;
         // TODO(?): RecordTick(stats_, MEMTABLE_HIT)?
       } else if (super_version->imm->Get(lkey, value, &s, &merge_context,
                                          &range_del_agg, read_options)) {
+          // DELETE
+          this->Delete(WriteOptions(), column_family[i], keys[i]);
         done = true;
         // TODO(?): RecordTick(stats_, MEMTABLE_HIT)?
       }
@@ -1086,6 +1091,8 @@ std::vector<Status> DBImpl::MultiGet(
       super_version->current->Get(read_options, lkey, &pinnable_val, &s,
                                   &merge_context, &range_del_agg);
       value->assign(pinnable_val.data(), pinnable_val.size());
+        // DELETE
+        this->Delete(WriteOptions(), column_family[i], keys[i]);
       // TODO(?): RecordTick(stats_, MEMTABLE_MISS)?
     }
 
