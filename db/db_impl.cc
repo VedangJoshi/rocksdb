@@ -1008,6 +1008,7 @@ std::vector<Status> DBImpl::MultiGet(
   };
 
   std::unordered_map<uint32_t, MultiGetColumnFamilyData*> multiget_cf_data;
+
   // fill up and allocate outside of mutex
   for (auto cf : column_family) {
     auto cfh = reinterpret_cast<ColumnFamilyHandleImpl*>(cf);
@@ -1016,6 +1017,7 @@ std::vector<Status> DBImpl::MultiGet(
       auto mgcfd = new MultiGetColumnFamilyData();
       mgcfd->cfd = cfd;
       multiget_cf_data.insert({cfd->GetID(), mgcfd});
+      cout << "\n Column_family: " << cfd->GetName() << endl;
     }
   }
 

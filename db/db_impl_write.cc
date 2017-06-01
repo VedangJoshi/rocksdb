@@ -14,6 +14,7 @@
 #define __STDC_FORMAT_MACROS
 #endif
 #include <inttypes.h>
+#include <iostream>
 #include "monitoring/perf_context_imp.h"
 #include "options/options_helper.h"
 #include "util/sync_point.h"
@@ -66,7 +67,11 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
     return Status::Corruption("Batch is nullptr!");
   }
 
+  std::cout << "\n" << __func__ << " " << __LINE__ << std::endl;
+
+  // Todo : what's this method doing??
   if (immutable_db_options_.enable_pipelined_write) {
+    std::cout << __func__ << " " << __LINE__ << std::endl;
     return PipelinedWriteImpl(write_options, my_batch, callback, log_used,
                               log_ref, disable_memtable);
   }
@@ -74,8 +79,9 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
   Status status;
 
   PERF_TIMER_GUARD(write_pre_and_post_process_time);
-  WriteThread::Writer w(write_options, my_batch, callback, log_ref,
-                        disable_memtable);
+
+  // Create a writer with the given "write" batch
+  WriteThread::Writer w(write_options, my_batch, callback, log_ref, disable_memtable);
 
   if (!write_options.disableWAL) {
     RecordTick(stats_, WRITE_WITH_WAL);
@@ -83,7 +89,9 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
 
   StopWatch write_sw(env_, immutable_db_options_.statistics.get(), DB_WRITE);
 
+  // Writer joins the batch group
   write_thread_.JoinBatchGroup(&w);
+
   if (w.state == WriteThread::STATE_PARALLEL_MEMTABLE_WRITER) {
     // we are a non-leader in a parallel group
     PERF_TIMER_GUARD(write_memtable_time);
@@ -92,6 +100,7 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
       ColumnFamilyMemTablesImpl column_family_memtables(
           versions_->GetColumnFamilySet());
       WriteBatchInternal::SetSequence(w.batch, w.sequence);
+
       w.status = WriteBatchInternal::InsertInto(
           &w, &column_family_memtables, &flush_scheduler_,
           write_options.ignore_missing_column_families, 0 /*log_number*/, this,
@@ -158,11 +167,14 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
     // assumed to be true.  Rule 3 is checked for each batch.  We could
     // relax rules 2 if we could prevent write batches from referring
     // more than once to a particular key.
+
+    std::cout << __func__ << " " << __LINE__ << std::endl;
     bool parallel = immutable_db_options_.allow_concurrent_memtable_write &&
                     write_group.size > 1;
     int total_count = 0;
     uint64_t total_byte_size = 0;
     for (auto* writer : write_group) {
+       std::cout << __func__ << " " << __LINE__ << std::endl;
       if (writer->CheckCallback(this)) {
         if (writer->ShouldWriteToMemtable()) {
           total_count += WriteBatchInternal::Count(writer->batch);
@@ -203,7 +215,12 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
     PERF_TIMER_STOP(write_pre_and_post_process_time);
 
     if (status.ok() && !write_options.disableWAL) {
+      std::cout << __func__ << " " << __LINE__ << std::endl;
       PERF_TIMER_GUARD(write_wal_time);
+
+      // Todo : Record added to the WAL
+      // Should WriteToWAL() be considered when making the data in the Slice
+      // pointed to by key in a different ColumnFamily
       status = WriteToWAL(write_group, cur_log_writer, need_log_sync,
                           need_log_dir_sync, current_sequence);
       if (log_used != nullptr) {
@@ -215,11 +232,13 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
       PERF_TIMER_GUARD(write_memtable_time);
 
       if (!parallel) {
+        std::cout << __func__ << " " << __LINE__ << std::endl;
         w.status = WriteBatchInternal::InsertInto(
             write_group, current_sequence, column_family_memtables_.get(),
             &flush_scheduler_, write_options.ignore_missing_column_families,
             0 /*recovery_log_number*/, this);
       } else {
+        std::cout << __func__ << " " << __LINE__ << std::endl;
         SequenceNumber next_sequence = current_sequence;
         for (auto* writer : write_group) {
           if (writer->ShouldWriteToMemtable()) {
@@ -535,7 +554,10 @@ Status DBImpl::WriteToWAL(const WriteThread::WriteGroup& write_group,
   WriteBatchInternal::SetSequence(merged_batch, sequence);
 
   Slice log_entry = WriteBatchInternal::Contents(merged_batch);
+
+  // Add record to WAL
   status = log_writer->AddRecord(log_entry);
+
   total_log_size_ += log_entry.size();
   alive_log_files_.back().AddSize(log_entry.size());
   log_empty_ = false;

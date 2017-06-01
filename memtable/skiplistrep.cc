@@ -5,6 +5,7 @@
 //  This source code is also licensed under the GPLv2 license found in the
 //  COPYING file in the root directory of this source tree.
 //
+#include <iostream>
 #include "memtable/inlineskiplist.h"
 #include "db/memtable.h"
 #include "rocksdb/memtablerep.h"

@@ -91,14 +91,14 @@ int main() {
     keys.push_back("key3");
     keys.push_back("key4");
 
-    cout << "Before :: HDD" << endl;
+    cout << "\nBefore :: HDD" << endl;
     rocksdb::Iterator* it;
     it = db_hdd->NewIterator(rocksdb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         cout << it->key().ToString() << ": " << it->value().ToString() << endl;
     }
 
-    cout << "Before :: SSD" << endl;
+    cout << "\nBefore :: SSD" << endl;
     it = db_ssd->NewIterator(rocksdb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         cout << it->key().ToString() << ": " << it->value().ToString() << endl;
@@ -109,17 +109,18 @@ int main() {
     assert(it->status().ok()); // Check for any errors found during the scan
 
     // MOVE
+    // move(src_db, dest_db, dest_db_cf_handle, ReadOptions, WriteOptions, keys_vector)
     s = db_ssd->move(db_ssd, db_hdd, handles_hdd[0], ReadOptions(), WriteOptions(), keys);
     assert(s.ok());
 
-    cout << "After :: HDD" << endl;
+    cout << "\nAfter :: HDD" << endl;
     it = db_hdd->NewIterator(rocksdb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         cout << it->key().ToString() << ": " << it->value().ToString() << endl;
     }
     cout << endl;
 
-    cout << "After :: SSD" << endl;
+    cout << "\nAfter :: SSD" << endl;
     it = db_ssd->NewIterator(rocksdb::ReadOptions());
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         cout << it->key().ToString() << ": " << it->value().ToString() << endl;

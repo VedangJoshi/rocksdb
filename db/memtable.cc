@@ -14,6 +14,7 @@
 #include <memory>
 #include <algorithm>
 #include <limits>
+#include <iostream>
 
 #include "db/dbformat.h"
 #include "db/merge_context.h"
@@ -40,6 +41,13 @@
 #include "util/stop_watch.h"
 
 namespace rocksdb {
+
+    // Stores the value's pointer and size
+    namespace multitier_KV {
+        const char* val_ptr = nullptr;
+        uint32_t val_size = 0;
+        bool isValid = false;
+    }
 
 MemTableOptions::MemTableOptions(const ImmutableCFOptions& ioptions,
                                  const MutableCFOptions& mutable_cf_options)
@@ -414,6 +422,7 @@ MemTable::MemTableStats MemTable::ApproximateStats(const Slice& start_ikey,
   return {entry_count * (data_size / n), entry_count};
 }
 
+// TODO
 void MemTable::Add(SequenceNumber s, ValueType type,
                    const Slice& key, /* user key */
                    const Slice& value, bool allow_concurrent,
@@ -432,18 +441,42 @@ void MemTable::Add(SequenceNumber s, ValueType type,
   char* buf = nullptr;
   std::unique_ptr<MemTableRep>& table =
       type == kTypeRangeDeletion ? range_del_table_ : table_;
+
+  // Allocate memory for key
   KeyHandle handle = table->Allocate(encoded_len, &buf);
 
   char* p = EncodeVarint32(buf, internal_key_size);
+
+  // Move key's data to allocated region p
   memcpy(p, key.data(), key_size);
+
+  // Move key to Slice
   Slice key_slice(p, key_size);
+
+  // Advance key_ptr
   p += key_size;
+
   uint64_t packed = PackSequenceAndType(s, type);
   EncodeFixed64(p, packed);
   p += 8;
+
   p = EncodeVarint32(p, val_size);
-  memcpy(p, value.data(), val_size);
+
+  // Todo Value inserted here
+  // Now copy the key's value to p
+  if(multitier_KV::isValid) {
+      memcpy(p, multitier_KV::val_ptr, multitier_KV::val_size);
+      multitier_KV::isValid = false;
+      multitier_KV::val_ptr = nullptr;
+      multitier_KV::val_size = 0;
+
+      std::cout << __func__ << " " << __LINE__ << std::endl;
+  } else {
+      memcpy(p, value.data(), val_size); 
+  }
+
   assert((unsigned)(p + val_size - buf) == (unsigned)encoded_len);
+
   if (!allow_concurrent) {
     // Extract prefix for insert with hint.
     if (insert_with_hint_prefix_extractor_ != nullptr &&
@@ -451,6 +484,7 @@ void MemTable::Add(SequenceNumber s, ValueType type,
       Slice prefix = insert_with_hint_prefix_extractor_->Transform(key_slice);
       table->InsertWithHint(handle, &insert_hints_[prefix]);
     } else {
+      std::cout << __FUNCTION__ << " " << __LINE__ << std::endl;
       table->Insert(handle);
     }
 
@@ -539,6 +573,7 @@ struct Saver {
 
 static bool SaveValue(void* arg, const char* entry) {
   Saver* s = reinterpret_cast<Saver*>(arg);
+  std::cout << "\n Before " << __func__ << " " << *(s->value) << std::endl;
   MergeContext* merge_context = s->merge_context;
   RangeDelAggregator* range_del_agg = s->range_del_agg;
   const MergeOperator* merge_operator = s->merge_operator;
@@ -573,6 +608,14 @@ static bool SaveValue(void* arg, const char* entry) {
           s->mem->GetLock(s->key->user_key())->ReadLock();
         }
         Slice v = GetLengthPrefixedSlice(key_ptr + key_length);
+        std::string temp;
+          // TODO:  "Value" available here
+          std::cout << "\n Value pointer and lenght: " << key_ptr << " " << key_length << std::endl;
+
+          multitier_KV::val_ptr = key_ptr;
+          multitier_KV::val_size = key_length;
+          multitier_KV::isValid = true;
+
         *(s->status) = Status::OK();
         if (*(s->merge_in_progress)) {
           *(s->status) = MergeHelper::TimedFullMerge(
@@ -581,6 +624,7 @@ static bool SaveValue(void* arg, const char* entry) {
               s->env_);
         } else if (s->value != nullptr) {
           s->value->assign(v.data(), v.size());
+          std::cout << "\n After " << __func__ << " " << *(s->value) << std::endl;
         }
         if (s->inplace_update_support) {
           s->mem->GetLock(s->key->user_key())->ReadUnlock();
@@ -629,6 +673,7 @@ static bool SaveValue(void* arg, const char* entry) {
   return false;
 }
 
+// TODO
 bool MemTable::Get(const LookupKey& key, std::string* value, Status* s,
                    MergeContext* merge_context,
                    RangeDelAggregator* range_del_agg, SequenceNumber* seq,
@@ -657,11 +702,15 @@ bool MemTable::Get(const LookupKey& key, std::string* value, Status* s,
     }
     std::unique_ptr<InternalIterator> range_del_iter(
         NewRangeTombstoneIterator(read_opts));
+
     Status status = range_del_agg->AddTombstones(std::move(range_del_iter));
+
     if (!status.ok()) {
       *s = status;
       return false;
     }
+
+    std::cout << "Memtable:: " << *value << std::endl;
     Saver saver;
     saver.status = s;
     saver.found_final_value = &found_final_value;
@@ -677,9 +726,10 @@ bool MemTable::Get(const LookupKey& key, std::string* value, Status* s,
     saver.inplace_update_support = moptions_.inplace_update_support;
     saver.statistics = moptions_.statistics;
     saver.env_ = env_;
-    table_->Get(key, &saver, SaveValue);
+    table_->Get(key, &saver, SaveValue); // SaveValue -> callback
 
     *seq = saver.seq;
+    std::cout << "Memtable:: " << *saver.value << std::endl;
   }
 
   // No change to value, since we have not yet found a Put/Delete
@@ -857,6 +907,7 @@ size_t MemTable::CountSuccessiveMergeEntries(const LookupKey& key) {
   return num_successive_merges;
 }
 
+// TODO
 void MemTableRep::Get(const LookupKey& k, void* callback_args,
                       bool (*callback_func)(void* arg, const char* entry)) {
   auto iter = GetDynamicPrefixIterator();
