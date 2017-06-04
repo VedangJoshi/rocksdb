@@ -1017,7 +1017,7 @@ std::vector<Status> DBImpl::MultiGet(
       auto mgcfd = new MultiGetColumnFamilyData();
       mgcfd->cfd = cfd;
       multiget_cf_data.insert({cfd->GetID(), mgcfd});
-      cout << "\n Column_family: " << cfd->GetName() << endl;
+//      cout << "\n Column_family: " << cfd->GetName() << endl;
     }
   }
 

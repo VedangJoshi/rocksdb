@@ -470,7 +470,7 @@ void MemTable::Add(SequenceNumber s, ValueType type,
       multitier_KV::val_ptr = nullptr;
       multitier_KV::val_size = 0;
 
-      std::cout << __func__ << " " << __LINE__ << std::endl;
+//      std::cout << __func__ << " " << __LINE__ << std::endl;
   } else {
       memcpy(p, value.data(), val_size); 
   }
@@ -484,7 +484,7 @@ void MemTable::Add(SequenceNumber s, ValueType type,
       Slice prefix = insert_with_hint_prefix_extractor_->Transform(key_slice);
       table->InsertWithHint(handle, &insert_hints_[prefix]);
     } else {
-      std::cout << __FUNCTION__ << " " << __LINE__ << std::endl;
+//      std::cout << __FUNCTION__ << " " << __LINE__ << std::endl;
       table->Insert(handle);
     }
 
@@ -573,7 +573,7 @@ struct Saver {
 
 static bool SaveValue(void* arg, const char* entry) {
   Saver* s = reinterpret_cast<Saver*>(arg);
-  std::cout << "\n Before " << __func__ << " " << *(s->value) << std::endl;
+//  std::cout << "\n Before " << __func__ << " " << *(s->value) << std::endl;
   MergeContext* merge_context = s->merge_context;
   RangeDelAggregator* range_del_agg = s->range_del_agg;
   const MergeOperator* merge_operator = s->merge_operator;
@@ -610,7 +610,7 @@ static bool SaveValue(void* arg, const char* entry) {
         Slice v = GetLengthPrefixedSlice(key_ptr + key_length);
         std::string temp;
           // TODO:  "Value" available here
-          std::cout << "\n Value pointer and lenght: " << key_ptr << " " << key_length << std::endl;
+//          std::cout << "\n Value pointer and lenght: " << key_ptr << " " << key_length << std::endl;
 
           multitier_KV::val_ptr = key_ptr;
           multitier_KV::val_size = key_length;
@@ -624,7 +624,7 @@ static bool SaveValue(void* arg, const char* entry) {
               s->env_);
         } else if (s->value != nullptr) {
           s->value->assign(v.data(), v.size());
-          std::cout << "\n After " << __func__ << " " << *(s->value) << std::endl;
+//          std::cout << "\n After " << __func__ << " " << *(s->value) << std::endl;
         }
         if (s->inplace_update_support) {
           s->mem->GetLock(s->key->user_key())->ReadUnlock();
@@ -710,7 +710,7 @@ bool MemTable::Get(const LookupKey& key, std::string* value, Status* s,
       return false;
     }
 
-    std::cout << "Memtable:: " << *value << std::endl;
+//    std::cout << "Memtable:: " << *value << std::endl;
     Saver saver;
     saver.status = s;
     saver.found_final_value = &found_final_value;
@@ -729,7 +729,7 @@ bool MemTable::Get(const LookupKey& key, std::string* value, Status* s,
     table_->Get(key, &saver, SaveValue); // SaveValue -> callback
 
     *seq = saver.seq;
-    std::cout << "Memtable:: " << *saver.value << std::endl;
+//    std::cout << "Memtable:: " << *saver.value << std::endl;
   }
 
   // No change to value, since we have not yet found a Put/Delete

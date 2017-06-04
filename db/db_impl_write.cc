@@ -67,11 +67,11 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
     return Status::Corruption("Batch is nullptr!");
   }
 
-  std::cout << "\n" << __func__ << " " << __LINE__ << std::endl;
+//  std::cout << "\n" << __func__ << " " << __LINE__ << std::endl;
 
   // Todo : what's this method doing??
   if (immutable_db_options_.enable_pipelined_write) {
-    std::cout << __func__ << " " << __LINE__ << std::endl;
+//    std::cout << __func__ << " " << __LINE__ << std::endl;
     return PipelinedWriteImpl(write_options, my_batch, callback, log_used,
                               log_ref, disable_memtable);
   }
@@ -168,13 +168,13 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
     // relax rules 2 if we could prevent write batches from referring
     // more than once to a particular key.
 
-    std::cout << __func__ << " " << __LINE__ << std::endl;
+//    std::cout << __func__ << " " << __LINE__ << std::endl;
     bool parallel = immutable_db_options_.allow_concurrent_memtable_write &&
                     write_group.size > 1;
     int total_count = 0;
     uint64_t total_byte_size = 0;
     for (auto* writer : write_group) {
-       std::cout << __func__ << " " << __LINE__ << std::endl;
+//       std::cout << __func__ << " " << __LINE__ << std::endl;
       if (writer->CheckCallback(this)) {
         if (writer->ShouldWriteToMemtable()) {
           total_count += WriteBatchInternal::Count(writer->batch);
@@ -215,7 +215,7 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
     PERF_TIMER_STOP(write_pre_and_post_process_time);
 
     if (status.ok() && !write_options.disableWAL) {
-      std::cout << __func__ << " " << __LINE__ << std::endl;
+//      std::cout << __func__ << " " << __LINE__ << std::endl;
       PERF_TIMER_GUARD(write_wal_time);
 
       // Todo : Record added to the WAL
@@ -232,13 +232,13 @@ Status DBImpl::WriteImpl(const WriteOptions& write_options,
       PERF_TIMER_GUARD(write_memtable_time);
 
       if (!parallel) {
-        std::cout << __func__ << " " << __LINE__ << std::endl;
+//        std::cout << __func__ << " " << __LINE__ << std::endl;
         w.status = WriteBatchInternal::InsertInto(
             write_group, current_sequence, column_family_memtables_.get(),
             &flush_scheduler_, write_options.ignore_missing_column_families,
             0 /*recovery_log_number*/, this);
       } else {
-        std::cout << __func__ << " " << __LINE__ << std::endl;
+//        std::cout << __func__ << " " << __LINE__ << std::endl;
         SequenceNumber next_sequence = current_sequence;
         for (auto* writer : write_group) {
           if (writer->ShouldWriteToMemtable()) {

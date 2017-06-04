@@ -378,9 +378,9 @@ Status WriteBatch::Iterate(Handler* handler) const {
     s = ReadRecordFromWriteBatch(&input, &tag, &column_family, &key, &value,
                                  &blob, &xid);
 
-    std::cout << __func__ << " " << __LINE__ << " "
-              << key.data()
-              << " - " << (int)tag << " - " << std::endl;
+//    std::cout << __func__ << " " << __LINE__ << " "
+//              << key.data()
+//              << " - " << (int)tag << " - " << std::endl;
 
     if (!s.ok()) {
       return s;
@@ -392,7 +392,7 @@ Status WriteBatch::Iterate(Handler* handler) const {
         assert(content_flags_.load(std::memory_order_relaxed) &
                (ContentFlags::DEFERRED | ContentFlags::HAS_PUT));
         s = handler->PutCF(column_family, key, value);
-            std::cout << __func__ << " " << __LINE__ << std::endl ;
+//            std::cout << __func__ << " " << __LINE__ << std::endl ;
         found++;
         break;
       case kTypeColumnFamilyDeletion:
@@ -400,7 +400,7 @@ Status WriteBatch::Iterate(Handler* handler) const {
         assert(content_flags_.load(std::memory_order_relaxed) &
                (ContentFlags::DEFERRED | ContentFlags::HAS_DELETE));
         s = handler->DeleteCF(column_family, key);
-            std::cout << __func__ << " " << __LINE__ << std::endl ;
+//            std::cout << __func__ << " " << __LINE__ << std::endl ;
         found++;
         break;
       case kTypeColumnFamilySingleDeletion:
@@ -441,7 +441,7 @@ Status WriteBatch::Iterate(Handler* handler) const {
         assert(content_flags_.load(std::memory_order_relaxed) &
                (ContentFlags::DEFERRED | ContentFlags::HAS_COMMIT));
         handler->MarkCommit(xid);
-            std::cout << __func__ << " " << __LINE__ << std::endl ;
+//            std::cout << __func__ << " " << __LINE__ << std::endl ;
         break;
       case kTypeRollbackXID:
         assert(content_flags_.load(std::memory_order_relaxed) &
@@ -498,7 +498,7 @@ Status WriteBatchInternal::Put(WriteBatch* b, uint32_t column_family_id,
   PutLengthPrefixedSlice(&b->rep_, key);
   PutLengthPrefixedSlice(&b->rep_, value);
 
-  std::cout << "\nPUT: " << b->rep_;
+//  std::cout << "\nPUT: " << b->rep_;
 
   b->content_flags_.store(
       b->content_flags_.load(std::memory_order_relaxed) | ContentFlags::HAS_PUT,
@@ -597,7 +597,7 @@ Status WriteBatchInternal::Delete(WriteBatch* b, uint32_t column_family_id,
                               ContentFlags::HAS_DELETE,
                           std::memory_order_relaxed);
 
-    std::cout << "\n DELETE: " << b->rep_ << " Content_flags: " << b->content_flags_ << std::endl;
+//    std::cout << "\n DELETE: " << b->rep_ << " Content_flags: " << b->content_flags_ << std::endl;
   return save.commit();
 }
 
@@ -971,20 +971,20 @@ public:
     auto* moptions = mem->GetMemTableOptions();
 
     if (!moptions->inplace_update_support) {
-        std::cout << __func__ << " " << __LINE__ << std::endl ;
+//        std::cout << __func__ << " " << __LINE__ << std::endl ;
       mem->Add(sequence_, kTypeValue, key, value, concurrent_memtable_writes_,
                get_post_process_info(mem));
     } else if (moptions->inplace_callback == nullptr) {
-        std::cout << __func__ << " " << __LINE__ << std::endl ;
+//        std::cout << __func__ << " " << __LINE__ << std::endl ;
       assert(!concurrent_memtable_writes_);
       mem->Update(sequence_, key, value);
       RecordTick(moptions->statistics, NUMBER_KEYS_UPDATED);
     } else {
-        std::cout << __func__ << " " << __LINE__ << std::endl ;
+//        std::cout << __func__ << " " << __LINE__ << std::endl ;
       assert(!concurrent_memtable_writes_);
       if (mem->UpdateCallback(sequence_, key, value)) {
       } else {
-          std::cout << __func__ << " " << __LINE__ << std::endl ;
+//          std::cout << __func__ << " " << __LINE__ << std::endl ;
         // key not found in memtable. Do sst get, update, add
         SnapshotImpl read_from_snapshot;
         read_from_snapshot.number_ = sequence_;
@@ -1319,7 +1319,7 @@ Status WriteBatchInternal::InsertInto(WriteThread::WriteGroup& write_group,
                                       bool ignore_missing_column_families,
                                       uint64_t recovery_log_number, DB* db,
                                       bool concurrent_memtable_writes) {
-  std::cout << __func__ << " " << __LINE__ << std::endl;
+//  std::cout << __func__ << " " << __LINE__ << std::endl;
   MemTableInserter inserter(sequence, memtables, flush_scheduler,
                             ignore_missing_column_families, recovery_log_number,
                             db, concurrent_memtable_writes);
@@ -1328,10 +1328,10 @@ Status WriteBatchInternal::InsertInto(WriteThread::WriteGroup& write_group,
       continue;
     }
 
-      std::cout << __func__ << " " << __LINE__
-                << " " << db->GetName()
-                << " "
-                << std::endl;
+//      std::cout << __func__ << " " << __LINE__
+//                << " " << db->GetName()
+//                << " "
+//                << std::endl;
     inserter.set_log_number_ref(w->log_ref);
     w->status = w->batch->Iterate(&inserter);
     if (!w->status.ok()) {
@@ -1368,7 +1368,7 @@ Status WriteBatchInternal::InsertInto(
     uint64_t log_number, DB* db, bool concurrent_memtable_writes,
     SequenceNumber* last_seq_used, bool* has_valid_writes) {
 
-  std::cout << "\n" << __func__ << " " << __LINE__ << std::endl;
+  //std::cout << "\n" << __func__ << " " << __LINE__ << std::endl;
   MemTableInserter inserter(WriteBatchInternal::Sequence(batch), memtables,
                             flush_scheduler, ignore_missing_column_families,
                             log_number, db, concurrent_memtable_writes,

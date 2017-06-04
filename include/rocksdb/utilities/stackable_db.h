@@ -72,7 +72,7 @@ class StackableDB : public DB {
                       const WriteOptions& write_options,
                       const std::vector<Slice>& keys) {
     return db_->move(src_db, dest_db, dest_db_cfh, read_options, write_options, keys);
-  };
+  }
 
   using DB::Put;
   virtual Status Put(const WriteOptions& options,
