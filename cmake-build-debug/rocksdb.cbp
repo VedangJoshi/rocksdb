@@ -9461,7 +9461,7 @@
 		<Unit filename="/Users/vedangjoshi/git/rocksdb/env/mock_env_test.cc">
 			<Option target="mock_env_test"/>
 		</Unit>
-		<Unit filename="/Users/vedangjoshi/git/rocksdb/examples/move_benchmark.h">
+		<Unit filename="/Users/vedangjoshi/git/rocksdb/examples/MTBench.h">
 			<Option target="build_version"/>
 			<Option target="testutillib"/>
 			<Option target="rocksdb"/>

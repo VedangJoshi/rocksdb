@@ -158,9 +158,9 @@ if(HAVE_THREAD_LOCAL)
   add_definitions(-DROCKSDB_SUPPORT_THREAD_LOCAL)
 endif()
 
-set(BUILD_VERSION_CC ${CMAKE_BINARY_DIR}/build_version.cc examples/move_benchmark.h)
+set(BUILD_VERSION_CC ${CMAKE_BINARY_DIR}/build_version.cc examples/MTBench.h examples/MTBench.h)
 configure_file(util/build_version.cc.in ${BUILD_VERSION_CC} @ONLY)
-add_library(build_version OBJECT ${BUILD_VERSION_CC} examples/move_benchmark.h)
+add_library(build_version OBJECT ${BUILD_VERSION_CC} examples/MTBench.h)
 target_include_directories(build_version PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/util)
 if(MSVC)
@@ -551,7 +551,7 @@ else()
   set(SYSTEM_LIBS ${CMAKE_THREAD_LIBS_INIT})
   set(LIBS ${ROCKSDB_SHARED_LIB} ${THIRDPARTY_LIBS} ${SYSTEM_LIBS})
 
-  add_library(${ROCKSDB_SHARED_LIB} SHARED ${SOURCES} examples/move_benchmark.h)
+  add_library(${ROCKSDB_SHARED_LIB} SHARED ${SOURCES} examples/MTBench.h examples/MTBench.h)
   target_link_libraries(${ROCKSDB_SHARED_LIB}
     ${THIRDPARTY_LIBS} ${SYSTEM_LIBS})
   set_target_properties(${ROCKSDB_SHARED_LIB} PROPERTIES
@@ -569,7 +569,7 @@ if(WITH_LIBRADOS)
   list(APPEND THIRDPARTY_LIBS rados)
 endif()
 
-add_library(${ROCKSDB_STATIC_LIB} STATIC ${SOURCES} examples/move_benchmark.h)
+add_library(${ROCKSDB_STATIC_LIB} STATIC ${SOURCES} examples/MTBench.h examples/MTBench.h)
 target_link_libraries(${ROCKSDB_STATIC_LIB}
   ${THIRDPARTY_LIBS} ${SYSTEM_LIBS})
 
@@ -746,7 +746,7 @@ set(TESTUTIL_SOURCE
     monitoring/thread_status_updater_debug.cc
     table/mock_table.cc
     util/fault_injection_test_env.cc
-        examples/move_benchmark.h)
+        examples/MTBench.h)
 # test utilities are only build in debug
 enable_testing()
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
