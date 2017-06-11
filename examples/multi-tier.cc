@@ -1,4 +1,3 @@
-
 #include <cstdio>
 #include <string>
 #include <iostream>
@@ -127,7 +126,6 @@ int main(int argc, char** argv) {
     }
 
     /****************************************************************************************************************/
-
     std::vector<string> values;
 
     /*
@@ -148,16 +146,19 @@ int main(int argc, char** argv) {
     // MOVE
     // move(src_db, dest_db, dest_db_cf_handle, ReadOptions, WriteOptions, keys_vector)
     s = db_ssd->move(db_ssd, db_hdd, handles_hdd[0], ReadOptions(), WriteOptions(), keys);
-
+	
     // Time end
     auto end = std::chrono::steady_clock::now();
 
-    cout << "Time: " << std::chrono::duration_cast<chrono::microseconds> (end - start).count() << endl;
+    cout << "Time: " << std::chrono::duration_cast<chrono::milliseconds> (end - start).count() << endl;
 
     // printDB(db_hdd, "\nAfter :: HDD");
     // cout << endl;
     // printDB(db_ssd, "\nAfter :: SSD");
     // cout << endl;
+
+//    static FlushOptions flush_opts;
+//    db_ssd->Flush(flush_opts);
 
     /****************************************************************************************************************/
     for (auto handle : handles_hdd) {

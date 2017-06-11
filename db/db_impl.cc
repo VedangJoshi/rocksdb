@@ -1138,7 +1138,7 @@ std::vector<Status> DBImpl::MultiGet(
 
 
 /**
- *  move() - naive
+ *  move()
  */
 Status DBImpl:: move(DB* src_db,
                      DB* dest_db,
@@ -1152,7 +1152,7 @@ Status DBImpl:: move(DB* src_db,
    SpinMutex spin_mutex;
 
    // spin_mutex - low overhead for low contention
-   spin_mutex.lock();
+
 
    // Get 'values' for all 'keys'
    // Delete() called within this function

@@ -39,6 +39,7 @@
 #include "util/murmurhash.h"
 #include "util/mutexlock.h"
 #include "util/stop_watch.h"
+#include "util/mutexlock.h"
 
 namespace rocksdb {
 
@@ -47,6 +48,7 @@ namespace rocksdb {
         const char* val_ptr = nullptr;
         uint32_t val_size = 0;
         bool isValid = false;
+        bool smart_move = true;
     }
 
 MemTableOptions::MemTableOptions(const ImmutableCFOptions& ioptions,
@@ -464,16 +466,18 @@ void MemTable::Add(SequenceNumber s, ValueType type,
 
   // Todo Value inserted here
   // Now copy the key's value to p
-  if(multitier_KV::isValid) {
-      memcpy(p, multitier_KV::val_ptr, multitier_KV::val_size);
-      multitier_KV::isValid = false;
-      multitier_KV::val_ptr = nullptr;
-      multitier_KV::val_size = 0;
 
-//      std::cout << __func__ << " " << __LINE__ << std::endl;
-  } else {
-      memcpy(p, value.data(), val_size); 
-  }
+//  multitier_KV::smart_move = true;
+//  if(multitier_KV::isValid) {
+//      memcpy(p, multitier_KV::val_ptr, multitier_KV::val_size);
+//      multitier_KV::isValid = false;
+//      multitier_KV::val_ptr = nullptr;
+//      multitier_KV::val_size = 0;
+//      //std::cout << "\n" << __func__ << " Smart " << std::endl;
+//  } else {
+      memcpy(p, value.data(), val_size);
+      //std::cout << "\n" << __func__ << " Naive " << std::endl;
+//  }
 
   assert((unsigned)(p + val_size - buf) == (unsigned)encoded_len);
 
@@ -572,6 +576,7 @@ struct Saver {
 }  // namespace
 
 static bool SaveValue(void* arg, const char* entry) {
+  SpinMutex spin_mutex;
   Saver* s = reinterpret_cast<Saver*>(arg);
 //  std::cout << "\n Before " << __func__ << " " << *(s->value) << std::endl;
   MergeContext* merge_context = s->merge_context;
@@ -612,9 +617,11 @@ static bool SaveValue(void* arg, const char* entry) {
           // TODO:  "Value" available here
 //          std::cout << "\n Value pointer and lenght: " << key_ptr << " " << key_length << std::endl;
 
-          multitier_KV::val_ptr = key_ptr;
-          multitier_KV::val_size = key_length;
-          multitier_KV::isValid = true;
+//        spin_mutex.lock();
+//          multitier_KV::val_ptr = key_ptr;
+//          multitier_KV::val_size = key_length;
+//          multitier_KV::isValid = true;
+//        spin_mutex.unlock();
 
         *(s->status) = Status::OK();
         if (*(s->merge_in_progress)) {
